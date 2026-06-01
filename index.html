@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlertaVia — Mapa de Ocorrências</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1c2535;
+    --border: #2a3447;
+    --text: #e8edf5;
+    --muted: #6b7a99;
+    --accent: #f59e0b;
+    --police: #3b82f6;
+    --blitz: #ef4444;
+    --accident: #f97316;
+    --radar: #8b5cf6;
+    --traffic: #10b981;
+    --road: #06b6d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 1000;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 300px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 500;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* REPORT BUTTON */
+  .btn-report {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-report:hover {
+    background: #fbbf24;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(245,158,11,0.4);
+  }
+
+  /* ALERT TYPES */
+  .type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .type-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .type-btn:hover, .type-btn.active {
+    border-color: var(--accent);
+    background: rgba(245,158,11,0.08);
+    color: var(--accent);
+  }
+
+  .type-icon { font-size: 1.1rem; }
+
+  /* ALERTS LIST */
+  .alerts-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .alerts-list::-webkit-scrollbar { width: 4px; }
+  .alerts-list::-webkit-scrollbar-track { background: transparent; }
+  .alerts-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .alert-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .alert-item:hover {
+    border-color: var(--accent);
+    background: rgba(245,158,11,0.05);
+  }
+
+  .alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .alert-type {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+
+  .alert-time {
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  .alert-desc {
+    font-size: 0.77rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .alert-addr {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .confirm-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .confirm-btn {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #10b981;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .confirm-btn:hover { background: rgba(16,185,129,0.2); }
+
+  .confirm-count {
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  /* MAP */
+  #map {
+    flex: 1;
+    background: #0d1117;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 360px;
+    max-width: 95vw;
+    animation: modalIn 0.25s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-label {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.87rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .form-textarea { resize: vertical; min-height: 70px; }
+  .form-select option { background: var(--surface2); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-submit {
+    flex: 2;
+    background: var(--accent);
+    border: none;
+    color: #000;
+    padding: 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+
+  .btn-submit:hover { background: #fbbf24; }
+
+  .map-hint {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.77rem;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+  }
+
+  .stat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .stat-label { color: var(--muted); }
+
+  /* MAP CLICK HINT */
+  .map-click-hint {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10,14,26,0.9);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    z-index: 1000;
+    pointer-events: none;
+    display: none;
+    letter-spacing: 0.5px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    AlertaVia
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    Tempo Real
+  </div>
+</header>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat"><div class="stat-dot" style="background:var(--blitz)"></div><span class="stat-num" id="countBlitz">0</span><span class="stat-label">Blitz</span></div>
+  <div class="stat"><div class="stat-dot" style="background:var(--police)"></div><span class="stat-num" id="countPolice">0</span><span class="stat-label">Polícia</span></div>
+  <div class="stat"><div class="stat-dot" style="background:var(--accident)"></div><span class="stat-num" id="countAccident">0</span><span class="stat-label">Acidente</span></div>
+  <div class="stat"><div class="stat-dot" style="background:var(--radar)"></div><span class="stat-num" id="countRadar">0</span><span class="stat-label">Radar</span></div>
+  <div class="stat"><div class="stat-dot" style="background:var(--traffic)"></div><span class="stat-num" id="countTraffic">0</span><span class="stat-label">Trânsito</span></div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-label">Reportar Ocorrência</div>
+      <button class="btn-report" onclick="openModal()">
+        ＋ Adicionar Alerta
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Filtrar por tipo</div>
+      <div class="type-grid">
+        <button class="type-btn active" data-type="all" onclick="filterType('all', this)">
+          <span class="type-icon">🗺️</span> Todos
+        </button>
+        <button class="type-btn" data-type="blitz" onclick="filterType('blitz', this)">
+          <span class="type-icon">🚔</span> Blitz
+        </button>
+        <button class="type-btn" data-type="police" onclick="filterType('police', this)">
+          <span class="type-icon">👮</span> Polícia
+        </button>
+        <button class="type-btn" data-type="accident" onclick="filterType('accident', this)">
+          <span class="type-icon">💥</span> Acidente
+        </button>
+        <button class="type-btn" data-type="radar" onclick="filterType('radar', this)">
+          <span class="type-icon">📷</span> Radar
+        </button>
+        <button class="type-btn" data-type="traffic" onclick="filterType('traffic', this)">
+          <span class="type-icon">🚦</span> Trânsito
+        </button>
+      </div>
+    </div>
+
+    <div class="section-label" style="padding: 12px 16px 4px;">Alertas Ativos</div>
+    <div class="alerts-list" id="alertsList">
+      <div class="empty-state">
+        <div class="empty-icon">📍</div>
+        Nenhum alerta ainda.<br>Clique em "+ Adicionar Alerta"<br>para reportar uma ocorrência.
+      </div>
+    </div>
+  </div>
+
+  <div style="position:relative; flex:1;">
+    <div id="map"></div>
+    <div class="map-click-hint" id="mapHint">📍 Clique no mapa para marcar a localização</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">📍 Novo Alerta</div>
+
+    <div id="locationStep">
+      <div class="map-hint">👆 Clique no mapa para marcar a localização da ocorrência</div>
+      <div class="form-group">
+        <label class="form-label">Localização selecionada</label>
+        <input type="text" class="form-input" id="locationDisplay" placeholder="Clique no mapa..." readonly>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tipo de Ocorrência</label>
+      <select class="form-select" id="alertType">
+        <option value="blitz">🚔 Blitz Policial</option>
+        <option value="police">👮 Viatura / Polícia</option>
+        <option value="accident">💥 Acidente</option>
+        <option value="radar">📷 Radar / Lombada</option>
+        <option value="traffic">🚦 Trânsito Intenso</option>
+        <option value="road">🚧 Obra / Desvio</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Descrição (opcional)</label>
+      <textarea class="form-textarea" id="alertDesc" placeholder="Ex: Blitz na entrada da ponte, sentido centro..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-submit" onclick="submitAlert()">Publicar Alerta</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- MAP SETUP ----
+const map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 13);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© CartoDB',
+  maxZoom: 19
+}).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+// ---- STATE ----
+let alerts = [];
+let markers = {};
+let selectedLatLng = null;
+let activeFilter = 'all';
+let clickMode = false;
+let idCounter = 0;
+
+const typeConfig = {
+  blitz:    { label: 'Blitz',         icon: '🚔', color: '#ef4444', expires: 120 },
+  police:   { label: 'Polícia',       icon: '👮', color: '#3b82f6', expires: 60  },
+  accident: { label: 'Acidente',      icon: '💥', color: '#f97316', expires: 180 },
+  radar:    { label: 'Radar',         icon: '📷', color: '#8b5cf6', expires: 9999 },
+  traffic:  { label: 'Trânsito',      icon: '🚦', color: '#10b981', expires: 45  },
+  road:     { label: 'Obra/Desvio',   icon: '🚧', color: '#06b6d4', expires: 9999 }
+};
+
+// ---- MODAL ----
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('locationDisplay').value = '';
+  document.getElementById('alertDesc').value = '';
+  selectedLatLng = null;
+  clickMode = true;
+  document.getElementById('mapHint').style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  clickMode = false;
+  document.getElementById('mapHint').style.display = 'none';
+}
+
+// ---- MAP CLICK ----
+map.on('click', function(e) {
+  if (!clickMode) return;
+  selectedLatLng = e.latlng;
+  document.getElementById('locationDisplay').value =
+    `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+});
+
+// ---- SUBMIT ----
+function submitAlert() {
+  if (!selectedLatLng) {
+    alert('Por favor, clique no mapa para selecionar a localização!');
+    return;
+  }
+  const type = document.getElementById('alertType').value;
+  const desc = document.getElementById('alertDesc').value || typeConfig[type].label;
+  const id = ++idCounter;
+  const alert = {
+    id, type, desc,
+    lat: selectedLatLng.lat,
+    lng: selectedLatLng.lng,
+    time: new Date(),
+    confirms: 0,
+    expires: typeConfig[type].expires
+  };
+
+  alerts.push(alert);
+  addMarker(alert);
+  renderList();
+  updateStats();
+  closeModal();
+}
+
+// ---- MARKER ----
+function createIcon(type) {
+  const cfg = typeConfig[type];
+  return L.divIcon({
+    html: `<div style="
+      background: ${cfg.color};
+      width: 36px; height: 36px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 2px 12px ${cfg.color}88;
+      border: 2px solid rgba(255,255,255,0.3);
+    "><span style="transform:rotate(45deg); font-size:16px">${cfg.icon}</span></div>`,
+    className: '',
+    iconSize: [36, 36],
+    iconAnchor: [18, 36]
+  });
+}
+
+function addMarker(alert) {
+  const m = L.marker([alert.lat, alert.lng], { icon: createIcon(alert.type) })
+    .addTo(map)
+    .bindPopup(`
+      <div style="font-family:'DM Sans',sans-serif; min-width:160px">
+        <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px">
+          ${typeConfig[alert.type].icon} ${typeConfig[alert.type].label}
+        </div>
+        <div style="color:#888; font-size:0.8rem; margin-bottom:6px">${alert.desc}</div>
+        <div style="color:#aaa; font-size:0.72rem">🕐 ${formatTime(alert.time)}</div>
+        <div style="color:#10b981; font-size:0.72rem; margin-top:2px">✅ ${alert.confirms} confirmações</div>
+      </div>
+    `);
+  markers[alert.id] = m;
+}
+
+// ---- RENDER LIST ----
+function renderList() {
+  const list = document.getElementById('alertsList');
+  const filtered = activeFilter === 'all'
+    ? alerts
+    : alerts.filter(a => a.type === activeFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📍</div>
+      Nenhum alerta${activeFilter !== 'all' ? ' deste tipo' : ''}.<br>
+      Seja o primeiro a reportar!
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.slice().reverse().map(a => {
+    const cfg = typeConfig[a.type];
+    return `
+    <div class="alert-item" style="border-left-color:${cfg.color}" onclick="focusAlert(${a.id})">
+      <div class="alert-header">
+        <div class="alert-type" style="color:${cfg.color}">${cfg.icon} ${cfg.label}</div>
+        <div class="alert-time">${formatTime(a.time)}</div>
+      </div>
+      <div class="alert-desc">${a.desc}</div>
+      <div class="alert-addr">📍 ${a.lat.toFixed(4)}, ${a.lng.toFixed(4)}</div>
+      <div class="confirm-row">
+        <button class="confirm-btn" onclick="event.stopPropagation(); confirmAlert(${a.id})">✅ Confirmar</button>
+        <span class="confirm-count">${a.confirms} ${a.confirms === 1 ? 'confirmação' : 'confirmações'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function focusAlert(id) {
+  const a = alerts.find(x => x.id === id);
+  if (a) {
+    map.setView([a.lat, a.lng], 16, { animate: true });
+    markers[id]?.openPopup();
+  }
+}
+
+function confirmAlert(id) {
+  const a = alerts.find(x => x.id === id);
+  if (a) {
+    a.confirms++;
+    renderList();
+    markers[id]?.setPopupContent(`
+      <div style="font-family:'DM Sans',sans-serif; min-width:160px">
+        <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px">
+          ${typeConfig[a.type].icon} ${typeConfig[a.type].label}
+        </div>
+        <div style="color:#888; font-size:0.8rem; margin-bottom:6px">${a.desc}</div>
+        <div style="color:#aaa; font-size:0.72rem">🕐 ${formatTime(a.time)}</div>
+        <div style="color:#10b981; font-size:0.72rem; margin-top:2px">✅ ${a.confirms} confirmações</div>
+      </div>
+    `);
+  }
+}
+
+// ---- FILTER ----
+function filterType(type, btn) {
+  activeFilter = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  Object.keys(markers).forEach(id => {
+    const a = alerts.find(x => x.id == id);
+    if (!a) return;
+    if (type === 'all' || a.type === type) {
+      if (!map.hasLayer(markers[id])) markers[id].addTo(map);
+    } else {
+      if (map.hasLayer(markers[id])) map.removeLayer(markers[id]);
+    }
+  });
+  renderList();
+}
+
+// ---- STATS ----
+function updateStats() {
+  const counts = { blitz: 0, police: 0, accident: 0, radar: 0, traffic: 0 };
+  alerts.forEach(a => { if (counts[a.type] !== undefined) counts[a.type]++; });
+  document.getElementById('countBlitz').textContent = counts.blitz;
+  document.getElementById('countPolice').textContent = counts.police;
+  document.getElementById('countAccident').textContent = counts.accident;
+  document.getElementById('countRadar').textContent = counts.radar;
+  document.getElementById('countTraffic').textContent = counts.traffic;
+}
+
+// ---- UTILS ----
+function formatTime(date) {
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ---- DEMO DATA ----
+function addDemoAlerts() {
+  const demos = [
+    { type: 'blitz',    lat: -23.5505, lng: -46.6333, desc: 'Blitz na Av. Paulista, altura do MASP', confirms: 4 },
+    { type: 'radar',    lat: -23.5545, lng: -46.6200, desc: 'Radar fixo Av. Consolação - 40km/h',   confirms: 11 },
+    { type: 'accident', lat: -23.5600, lng: -46.6450, desc: 'Colisão entre 2 veículos, faixa direita bloqueada', confirms: 2 },
+    { type: 'traffic',  lat: -23.5480, lng: -46.6400, desc: 'Trânsito lento sentido centro',          confirms: 7 },
+    { type: 'police',   lat: -23.5430, lng: -46.6280, desc: 'Viatura estacionada na esquina',         confirms: 1 },
+    { type: 'road',     lat: -23.5650, lng: -46.6300, desc: 'Obra na pista - desvio pela lateral',    confirms: 3 },
+  ];
+  demos.forEach(d => {
+    const id = ++idCounter;
+    const a = { id, ...d, time: new Date(Date.now() - Math.random() * 3600000), expires: 120 };
+    alerts.push(a);
+    addMarker(a);
+  });
+  renderList();
+  updateStats();
+}
+
+addDemoAlerts();
+</script>
+</body>
+</html>
