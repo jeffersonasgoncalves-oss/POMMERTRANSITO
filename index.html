@@ -2,802 +2,516 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AlertaVia — Mapa de Ocorrências</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AlertaVia SC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
 <style>
-  :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --surface2: #1c2535;
-    --border: #2a3447;
-    --text: #e8edf5;
-    --muted: #6b7a99;
-    --accent: #f59e0b;
-    --police: #3b82f6;
-    --blitz: #ef4444;
-    --accident: #f97316;
-    --radar: #8b5cf6;
-    --traffic: #10b981;
-    --road: #06b6d4;
-  }
+:root{
+  --bg:#080c14;--panel:#0e1520;--panel2:#131d2e;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e4ecf7;--muted:#546e8a;--dim:#2a3a52;
+  --accent:#f6a623;--accent2:#ff6b35;
+  --green:#22c55e;--blue:#3b9eff;--red:#ff4757;
+  --orange:#ff7c3c;--purple:#a855f7;--cyan:#22d3ee;
+  --glow:rgba(246,166,35,0.18);--font:'Outfit',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--text)}
+.app{display:flex;flex-direction:column;height:100vh}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* TOPBAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;height:54px;
+  background:linear-gradient(135deg,#0b1220,#0e1829);
+  border-bottom:1px solid var(--border2);flex-shrink:0;z-index:600;
+  box-shadow:0 2px 20px rgba(0,0,0,0.5);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{
+  width:34px;height:34px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;box-shadow:0 0 16px var(--glow);
+}
+.brand-name{font-size:1.15rem;font-weight:800;letter-spacing:-0.3px}
+.brand-name span{color:var(--accent)}
+.brand-sub{font-size:0.6rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:-1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.live-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);
+  padding:5px 11px;border-radius:20px;
+  font-size:0.68rem;font-weight:600;color:var(--green);letter-spacing:1px;text-transform:uppercase;
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.5)}50%{opacity:0.5;box-shadow:0 0 0 4px rgba(34,197,94,0)}}
+.btn-add{
+  display:flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;color:#000;padding:8px 15px;border-radius:10px;
+  font-family:var(--font);font-weight:700;font-size:0.82rem;cursor:pointer;
+  transition:all 0.2s;box-shadow:0 0 18px rgba(246,166,35,0.3);white-space:nowrap;
+}
+.btn-add:hover{transform:translateY(-1px);box-shadow:0 4px 24px rgba(246,166,35,0.45)}
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+/* STATS */
+.statsrow{
+  display:flex;background:var(--panel);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  overflow-x:auto;scrollbar-width:none;
+}
+.statsrow::-webkit-scrollbar{display:none}
+.stat{
+  display:flex;align-items:center;gap:8px;padding:9px 16px;
+  border-right:1px solid var(--border);flex-shrink:0;cursor:pointer;
+  transition:background 0.15s;position:relative;
+}
+.stat:last-child{border-right:none}
+.stat:hover,.stat.on{background:rgba(255,255,255,0.04)}
+.stat.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--c);border-radius:2px 2px 0 0}
+.stat-emoji{font-size:1.2rem;line-height:1}
+.stat-num{font-size:0.92rem;font-weight:700;line-height:1}
+.stat-lbl{font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;line-height:1;margin-top:2px}
 
-  /* HEADER */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    z-index: 1000;
-    flex-shrink: 0;
-  }
+/* BODY */
+.body{display:flex;flex:1;overflow:hidden}
 
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.3rem;
-    letter-spacing: -0.5px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+/* SIDEBAR */
+.sidebar{
+  width:278px;flex-shrink:0;background:var(--panel);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  overflow:hidden;z-index:400;
+}
+.sb-head{padding:14px 16px 10px;border-bottom:1px solid var(--border);font-size:0.63rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.filter-list{display:flex;flex-direction:column;gap:2px;padding:8px;border-bottom:1px solid var(--border)}
+.filt{
+  display:flex;align-items:center;gap:9px;padding:9px 10px;
+  border-radius:9px;cursor:pointer;transition:all 0.15s;font-size:0.83rem;
+  border:1px solid transparent;
+}
+.filt:hover{background:rgba(255,255,255,0.04)}
+.filt.active{background:rgba(246,166,35,0.08);border-color:rgba(246,166,35,0.2);color:var(--accent)}
+.filt-emoji{font-size:1.1rem;width:22px;text-align:center}
+.filt-label{flex:1;font-weight:500}
+.filt-count{font-size:0.68rem;font-weight:700;background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:20px;min-width:22px;text-align:center}
+.alerts-head{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.alerts-title{font-size:0.63rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.alerts-clear{font-size:0.68rem;color:var(--muted);cursor:pointer;transition:color 0.15s}
+.alerts-clear:hover{color:var(--red)}
+.feed{flex:1;overflow-y:auto;padding:0 8px 12px;display:flex;flex-direction:column;gap:6px}
+.feed::-webkit-scrollbar{width:3px}
+.feed::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+.card{
+  background:var(--panel2);border:1px solid var(--border);border-radius:11px;
+  padding:11px 12px;cursor:pointer;transition:all 0.15s;
+  animation:cardIn 0.3s ease both;border-left:3px solid var(--c,var(--border));
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card:hover{border-color:rgba(246,166,35,0.3);background:rgba(246,166,35,0.04);transform:translateX(2px)}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.card-type{display:flex;align-items:center;gap:6px;font-weight:600;font-size:0.82rem}
+.card-emoji{font-size:1.1rem}
+.card-time{font-size:0.65rem;color:var(--muted)}
+.card-desc{font-size:0.76rem;color:var(--muted);line-height:1.45;margin-bottom:6px}
+.card-bottom{display:flex;align-items:center;gap:8px}
+.card-loc{font-size:0.65rem;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conf-btn{
+  display:flex;align-items:center;gap:4px;
+  background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);
+  color:var(--green);padding:3px 8px;border-radius:6px;
+  font-size:0.66rem;font-weight:600;cursor:pointer;transition:all 0.15s;
+  font-family:var(--font);white-space:nowrap;
+}
+.conf-btn:hover{background:rgba(34,197,94,0.18)}
+.empty{text-align:center;padding:32px 16px;color:var(--muted)}
+.empty-e{font-size:2.2rem;margin-bottom:8px}
+.empty-t{font-size:0.8rem;line-height:1.6}
 
-  .logo-dot {
-    width: 10px; height: 10px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 10px var(--accent);
-    animation: pulse 2s infinite;
-  }
+/* MAP */
+.map-wrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+.leaflet-container{background:#080c14}
+.leaflet-popup-content-wrapper{
+  background:#0e1829;color:#e4ecf7;
+  border:1px solid rgba(255,255,255,0.12);border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);font-family:'Outfit',sans-serif;
+}
+.leaflet-popup-tip{background:#0e1829}
+.leaflet-popup-close-button{color:#546e8a!important;font-size:18px!important;top:8px!important;right:10px!important}
+.hint{
+  position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+  background:rgba(8,12,20,0.92);border:1px solid var(--accent);
+  color:var(--accent);padding:9px 20px;border-radius:24px;
+  font-size:0.78rem;font-weight:600;letter-spacing:0.5px;
+  pointer-events:none;display:none;z-index:800;
+  box-shadow:0 0 20px rgba(246,166,35,0.3);
+}
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.3); }
-  }
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9000;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{
+  background:linear-gradient(145deg,#0e1829,#111f35);
+  border:1px solid var(--border2);border-radius:20px;
+  padding:26px;width:370px;max-width:95vw;
+  animation:modalIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 24px 60px rgba(0,0,0,0.7);
+}
+@keyframes modalIn{from{opacity:0;transform:scale(0.92) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:1.05rem;font-weight:700}
+.modal-close{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.06);border:none;color:var(--muted);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.modal-close:hover{background:rgba(255,255,255,0.12);color:var(--text)}
+.map-tip{background:rgba(246,166,35,0.08);border:1px solid rgba(246,166,35,0.2);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:0.78rem;color:var(--accent);line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.fgroup{margin-bottom:14px}
+.flabel{display:block;font-size:0.65rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.finput,.ftextarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border2);color:var(--text);padding:10px 13px;border-radius:10px;font-family:var(--font);font-size:0.86rem;outline:none;transition:border-color 0.15s}
+.finput:focus,.ftextarea:focus{border-color:var(--accent)}
+.finput::placeholder,.ftextarea::placeholder{color:var(--muted)}
+.ftextarea{resize:vertical;min-height:72px;line-height:1.5}
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.ttype{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px 6px;cursor:pointer;text-align:center;transition:all 0.15s}
+.ttype:hover{background:rgba(255,255,255,0.07)}
+.ttype.sel{background:rgba(246,166,35,0.1);border-color:rgba(246,166,35,0.4)}
+.ttype-e{font-size:1.5rem;display:block;margin-bottom:3px}
+.ttype-l{font-size:0.65rem;color:var(--muted);font-weight:500}
+.ttype.sel .ttype-l{color:var(--accent)}
+.modal-actions{display:flex;gap:10px;margin-top:22px}
+.btn-cancel{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);padding:11px;border-radius:10px;cursor:pointer;font-family:var(--font);font-weight:600;font-size:0.84rem;transition:all 0.15s}
+.btn-cancel:hover{border-color:var(--border2);color:var(--text)}
+.btn-ok{flex:2;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#000;padding:11px;border-radius:10px;cursor:pointer;font-family:var(--font);font-weight:700;font-size:0.84rem;transition:all 0.15s;box-shadow:0 0 18px rgba(246,166,35,0.25)}
+.btn-ok:hover{transform:translateY(-1px);box-shadow:0 4px 24px rgba(246,166,35,0.4)}
 
-  .live-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--accent);
-    background: rgba(245,158,11,0.1);
-    border: 1px solid rgba(245,158,11,0.3);
-    padding: 4px 10px;
-    border-radius: 20px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:20px;z-index:9999;background:linear-gradient(135deg,#0e1829,#111f35);border:1px solid rgba(34,197,94,0.35);border-radius:12px;padding:12px 18px;font-size:0.82rem;font-weight:500;display:flex;align-items:center;gap:9px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:toastIn 0.3s ease;pointer-events:none;color:var(--green)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-  .live-dot {
-    width: 6px; height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-  }
+/* EMOJI MARKERS */
+.emarker{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:2.5px solid rgba(255,255,255,0.2);font-size:1.55rem;line-height:1;box-shadow:0 3px 16px rgba(0,0,0,0.55);cursor:pointer;animation:popIn 0.35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+.emarker:hover{transform:scale(1.18)!important;transition:transform 0.15s}
 
-  /* MAIN LAYOUT */
-  .main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* SIDEBAR */
-  .sidebar {
-    width: 300px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    z-index: 500;
-    flex-shrink: 0;
-  }
-
-  .sidebar-section {
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .section-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.65rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-  }
-
-  /* REPORT BUTTON */
-  .btn-report {
-    width: 100%;
-    background: var(--accent);
-    color: #000;
-    border: none;
-    padding: 12px;
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-  }
-
-  .btn-report:hover {
-    background: #fbbf24;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(245,158,11,0.4);
-  }
-
-  /* ALERT TYPES */
-  .type-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .type-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 10px 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    transition: all 0.15s;
-    font-family: 'DM Sans', sans-serif;
-  }
-
-  .type-btn:hover, .type-btn.active {
-    border-color: var(--accent);
-    background: rgba(245,158,11,0.08);
-    color: var(--accent);
-  }
-
-  .type-icon { font-size: 1.1rem; }
-
-  /* ALERTS LIST */
-  .alerts-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .alerts-list::-webkit-scrollbar { width: 4px; }
-  .alerts-list::-webkit-scrollbar-track { background: transparent; }
-  .alerts-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .alert-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    border-left: 3px solid transparent;
-    animation: slideIn 0.3s ease;
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-10px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  .alert-item:hover {
-    border-color: var(--accent);
-    background: rgba(245,158,11,0.05);
-  }
-
-  .alert-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-
-  .alert-type {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 0.82rem;
-  }
-
-  .alert-time {
-    font-size: 0.68rem;
-    color: var(--muted);
-  }
-
-  .alert-desc {
-    font-size: 0.77rem;
-    color: var(--muted);
-    line-height: 1.4;
-  }
-
-  .alert-addr {
-    font-size: 0.72rem;
-    color: var(--muted);
-    margin-top: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .confirm-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-  }
-
-  .confirm-btn {
-    background: rgba(16,185,129,0.1);
-    border: 1px solid rgba(16,185,129,0.3);
-    color: #10b981;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 0.68rem;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .confirm-btn:hover { background: rgba(16,185,129,0.2); }
-
-  .confirm-count {
-    font-size: 0.68rem;
-    color: var(--muted);
-  }
-
-  /* MAP */
-  #map {
-    flex: 1;
-    background: #0d1117;
-  }
-
-  /* MODAL */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-
-  .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    width: 360px;
-    max-width: 95vw;
-    animation: modalIn 0.25s ease;
-  }
-
-  @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-  }
-
-  .modal-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .form-group { margin-bottom: 14px; }
-
-  .form-label {
-    display: block;
-    font-size: 0.72rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-    font-family: 'Syne', sans-serif;
-  }
-
-  .form-input, .form-select, .form-textarea {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.87rem;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .form-input:focus, .form-select:focus, .form-textarea:focus {
-    border-color: var(--accent);
-  }
-
-  .form-textarea { resize: vertical; min-height: 70px; }
-  .form-select option { background: var(--surface2); }
-
-  .modal-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-  }
-
-  .btn-cancel {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 11px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-
-  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
-
-  .btn-submit {
-    flex: 2;
-    background: var(--accent);
-    border: none;
-    color: #000;
-    padding: 11px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-
-  .btn-submit:hover { background: #fbbf24; }
-
-  .map-hint {
-    background: rgba(245,158,11,0.1);
-    border: 1px solid rgba(245,158,11,0.3);
-    color: var(--accent);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.77rem;
-    text-align: center;
-    margin-bottom: 14px;
-  }
-
-  /* STATS BAR */
-  .stats-bar {
-    display: flex;
-    gap: 16px;
-    padding: 8px 16px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .stat {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-  }
-
-  .stat-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-  }
-
-  .stat-num {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.85rem;
-  }
-
-  .stat-label { color: var(--muted); }
-
-  /* MAP CLICK HINT */
-  .map-click-hint {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(10,14,26,0.9);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    z-index: 1000;
-    pointer-events: none;
-    display: none;
-    letter-spacing: 0.5px;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 30px 16px;
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.6;
-  }
-
-  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+@media(max-width:640px){
+  .sidebar{width:100%;height:220px;flex-direction:row;border-right:none;border-bottom:1px solid var(--border)}
+  .body{flex-direction:column-reverse}
+  .filter-list{flex-direction:row;overflow-x:auto;border-bottom:none;border-right:1px solid var(--border);flex-shrink:0;gap:4px;padding:6px}
+  .filt{flex-direction:column;gap:2px;padding:7px 8px;min-width:70px;text-align:center}
+  .filt-count,.sb-head,.alerts-head{display:none}
+  .feed{flex:1;overflow-y:auto;padding:6px}
+  .brand-sub{display:none}
+}
 </style>
 </head>
 <body>
+<div class="app">
 
-<header>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    AlertaVia
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-icon">&#x1F6E3;&#xFE0F;</div>
+    <div>
+      <div class="brand-name">Alerta<span>Via</span> SC</div>
+      <div class="brand-sub">Pomerode &middot; Jaragu&aacute; &middot; Blumenau</div>
+    </div>
   </div>
-  <div class="live-badge">
-    <div class="live-dot"></div>
-    Tempo Real
+  <div class="topbar-right">
+    <div class="live-pill"><div class="live-dot"></div>Ao Vivo</div>
+    <button class="btn-add" onclick="openModal()">&#xFF0B; Reportar</button>
   </div>
 </header>
 
-<div class="stats-bar" id="statsBar">
-  <div class="stat"><div class="stat-dot" style="background:var(--blitz)"></div><span class="stat-num" id="countBlitz">0</span><span class="stat-label">Blitz</span></div>
-  <div class="stat"><div class="stat-dot" style="background:var(--police)"></div><span class="stat-num" id="countPolice">0</span><span class="stat-label">Polícia</span></div>
-  <div class="stat"><div class="stat-dot" style="background:var(--accident)"></div><span class="stat-num" id="countAccident">0</span><span class="stat-label">Acidente</span></div>
-  <div class="stat"><div class="stat-dot" style="background:var(--radar)"></div><span class="stat-num" id="countRadar">0</span><span class="stat-label">Radar</span></div>
-  <div class="stat"><div class="stat-dot" style="background:var(--traffic)"></div><span class="stat-num" id="countTraffic">0</span><span class="stat-label">Trânsito</span></div>
+<div class="statsrow">
+  <div class="stat" style="--c:var(--red)" data-type="blitz" onclick="filterBy('blitz',this)">
+    <div class="stat-emoji">&#x1F694;</div>
+    <div><div class="stat-num" id="s-blitz">0</div><div class="stat-lbl">Blitz</div></div>
+  </div>
+  <div class="stat" style="--c:var(--blue)" data-type="police" onclick="filterBy('police',this)">
+    <div class="stat-emoji">&#x1F46E;</div>
+    <div><div class="stat-num" id="s-police">0</div><div class="stat-lbl">Pol&iacute;cia</div></div>
+  </div>
+  <div class="stat" style="--c:var(--orange)" data-type="accident" onclick="filterBy('accident',this)">
+    <div class="stat-emoji">&#x1F4A5;</div>
+    <div><div class="stat-num" id="s-accident">0</div><div class="stat-lbl">Acidente</div></div>
+  </div>
+  <div class="stat" style="--c:var(--purple)" data-type="radar" onclick="filterBy('radar',this)">
+    <div class="stat-emoji">&#x1F4F7;</div>
+    <div><div class="stat-num" id="s-radar">0</div><div class="stat-lbl">Radar</div></div>
+  </div>
+  <div class="stat" style="--c:var(--green)" data-type="traffic" onclick="filterBy('traffic',this)">
+    <div class="stat-emoji">&#x1F6A6;</div>
+    <div><div class="stat-num" id="s-traffic">0</div><div class="stat-lbl">Tr&acirc;nsito</div></div>
+  </div>
+  <div class="stat" style="--c:var(--cyan)" data-type="road" onclick="filterBy('road',this)">
+    <div class="stat-emoji">&#x1F6A7;</div>
+    <div><div class="stat-num" id="s-road">0</div><div class="stat-lbl">Obra</div></div>
+  </div>
+  <div class="stat on" style="--c:var(--accent)" data-type="all" onclick="filterBy('all',this)">
+    <div class="stat-emoji">&#x1F5FA;&#xFE0F;</div>
+    <div><div class="stat-num" id="s-all">0</div><div class="stat-lbl">Total</div></div>
+  </div>
 </div>
 
-<div class="main">
-  <div class="sidebar">
-    <div class="sidebar-section">
-      <div class="section-label">Reportar Ocorrência</div>
-      <button class="btn-report" onclick="openModal()">
-        ＋ Adicionar Alerta
-      </button>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="section-label">Filtrar por tipo</div>
-      <div class="type-grid">
-        <button class="type-btn active" data-type="all" onclick="filterType('all', this)">
-          <span class="type-icon">🗺️</span> Todos
-        </button>
-        <button class="type-btn" data-type="blitz" onclick="filterType('blitz', this)">
-          <span class="type-icon">🚔</span> Blitz
-        </button>
-        <button class="type-btn" data-type="police" onclick="filterType('police', this)">
-          <span class="type-icon">👮</span> Polícia
-        </button>
-        <button class="type-btn" data-type="accident" onclick="filterType('accident', this)">
-          <span class="type-icon">💥</span> Acidente
-        </button>
-        <button class="type-btn" data-type="radar" onclick="filterType('radar', this)">
-          <span class="type-icon">📷</span> Radar
-        </button>
-        <button class="type-btn" data-type="traffic" onclick="filterType('traffic', this)">
-          <span class="type-icon">🚦</span> Trânsito
-        </button>
+<div class="body">
+  <aside class="sidebar">
+    <div class="sb-head">Filtrar por tipo</div>
+    <div class="filter-list">
+      <div class="filt active" data-type="all" onclick="filterBy('all',null,this)">
+        <span class="filt-emoji">&#x1F5FA;&#xFE0F;</span><span class="filt-label">Todos</span><span class="filt-count" id="f-all">0</span>
+      </div>
+      <div class="filt" data-type="blitz" onclick="filterBy('blitz',null,this)">
+        <span class="filt-emoji">&#x1F694;</span><span class="filt-label">Blitz</span><span class="filt-count" id="f-blitz">0</span>
+      </div>
+      <div class="filt" data-type="police" onclick="filterBy('police',null,this)">
+        <span class="filt-emoji">&#x1F46E;</span><span class="filt-label">Pol&iacute;cia</span><span class="filt-count" id="f-police">0</span>
+      </div>
+      <div class="filt" data-type="accident" onclick="filterBy('accident',null,this)">
+        <span class="filt-emoji">&#x1F4A5;</span><span class="filt-label">Acidente</span><span class="filt-count" id="f-accident">0</span>
+      </div>
+      <div class="filt" data-type="radar" onclick="filterBy('radar',null,this)">
+        <span class="filt-emoji">&#x1F4F7;</span><span class="filt-label">Radar</span><span class="filt-count" id="f-radar">0</span>
+      </div>
+      <div class="filt" data-type="traffic" onclick="filterBy('traffic',null,this)">
+        <span class="filt-emoji">&#x1F6A6;</span><span class="filt-label">Tr&acirc;nsito</span><span class="filt-count" id="f-traffic">0</span>
+      </div>
+      <div class="filt" data-type="road" onclick="filterBy('road',null,this)">
+        <span class="filt-emoji">&#x1F6A7;</span><span class="filt-label">Obra/Desvio</span><span class="filt-count" id="f-road">0</span>
       </div>
     </div>
-
-    <div class="section-label" style="padding: 12px 16px 4px;">Alertas Ativos</div>
-    <div class="alerts-list" id="alertsList">
-      <div class="empty-state">
-        <div class="empty-icon">📍</div>
-        Nenhum alerta ainda.<br>Clique em "+ Adicionar Alerta"<br>para reportar uma ocorrência.
+    <div class="alerts-head">
+      <span class="alerts-title">Alertas Recentes</span>
+      <span class="alerts-clear" onclick="clearAll()">Limpar tudo</span>
+    </div>
+    <div class="feed" id="feed">
+      <div class="empty">
+        <div class="empty-e">&#x1F4CD;</div>
+        <div class="empty-t">Nenhum alerta ainda.<br>Toque em <b>&#xFF0B; Reportar</b><br>para registrar uma ocorr&ecirc;ncia.</div>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <div style="position:relative; flex:1;">
+  <div class="map-wrap">
     <div id="map"></div>
-    <div class="map-click-hint" id="mapHint">📍 Clique no mapa para marcar a localização</div>
+    <div class="hint" id="hint">&#x1F4CD; Clique no mapa para marcar o local</div>
   </div>
+</div>
 </div>
 
 <!-- MODAL -->
-<div class="modal-overlay" id="modalOverlay">
+<div class="overlay" id="overlay">
   <div class="modal">
-    <div class="modal-title">📍 Novo Alerta</div>
-
-    <div id="locationStep">
-      <div class="map-hint">👆 Clique no mapa para marcar a localização da ocorrência</div>
-      <div class="form-group">
-        <label class="form-label">Localização selecionada</label>
-        <input type="text" class="form-input" id="locationDisplay" placeholder="Clique no mapa..." readonly>
+    <div class="modal-hd">
+      <div class="modal-title">&#x1F4CD; Nova Ocorr&ecirc;ncia</div>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="map-tip">
+      <span>&#x1F446;</span>
+      <span>Clique no mapa para marcar o local exato da ocorr&ecirc;ncia antes de confirmar.</span>
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Tipo de Ocorr&ecirc;ncia</label>
+      <div class="type-grid">
+        <div class="ttype sel" data-type="blitz" onclick="selType(this)"><span class="ttype-e">&#x1F694;</span><span class="ttype-l">Blitz</span></div>
+        <div class="ttype" data-type="police" onclick="selType(this)"><span class="ttype-e">&#x1F46E;</span><span class="ttype-l">Pol&iacute;cia</span></div>
+        <div class="ttype" data-type="accident" onclick="selType(this)"><span class="ttype-e">&#x1F4A5;</span><span class="ttype-l">Acidente</span></div>
+        <div class="ttype" data-type="radar" onclick="selType(this)"><span class="ttype-e">&#x1F4F7;</span><span class="ttype-l">Radar</span></div>
+        <div class="ttype" data-type="traffic" onclick="selType(this)"><span class="ttype-e">&#x1F6A6;</span><span class="ttype-l">Tr&acirc;nsito</span></div>
+        <div class="ttype" data-type="road" onclick="selType(this)"><span class="ttype-e">&#x1F6A7;</span><span class="ttype-l">Obra/Desvio</span></div>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="form-label">Tipo de Ocorrência</label>
-      <select class="form-select" id="alertType">
-        <option value="blitz">🚔 Blitz Policial</option>
-        <option value="police">👮 Viatura / Polícia</option>
-        <option value="accident">💥 Acidente</option>
-        <option value="radar">📷 Radar / Lombada</option>
-        <option value="traffic">🚦 Trânsito Intenso</option>
-        <option value="road">🚧 Obra / Desvio</option>
-      </select>
+    <div class="fgroup">
+      <label class="flabel">Localiza&ccedil;&atilde;o marcada</label>
+      <input type="text" class="finput" id="locDisp" placeholder="Clique no mapa primeiro..." readonly>
     </div>
-
-    <div class="form-group">
-      <label class="form-label">Descrição (opcional)</label>
-      <textarea class="form-textarea" id="alertDesc" placeholder="Ex: Blitz na entrada da ponte, sentido centro..."></textarea>
+    <div class="fgroup">
+      <label class="flabel">Descri&ccedil;&atilde;o (opcional)</label>
+      <textarea class="ftextarea" id="desc" placeholder="Ex: Blitz na entrada de Pomerode, sentido Jaragu&aacute;..."></textarea>
     </div>
-
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-submit" onclick="submitAlert()">Publicar Alerta</button>
+      <button class="btn-ok" onclick="submitAlert()">Publicar Alerta &#x1F6A8;</button>
     </div>
   </div>
 </div>
 
 <script>
-// ---- MAP SETUP ----
-const map = L.map('map', { zoomControl: false }).setView([-23.5505, -46.6333], 13);
-
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© CartoDB',
-  maxZoom: 19
-}).addTo(map);
-
-L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-// ---- STATE ----
-let alerts = [];
-let markers = {};
-let selectedLatLng = null;
-let activeFilter = 'all';
-let clickMode = false;
-let idCounter = 0;
-
-const typeConfig = {
-  blitz:    { label: 'Blitz',         icon: '🚔', color: '#ef4444', expires: 120 },
-  police:   { label: 'Polícia',       icon: '👮', color: '#3b82f6', expires: 60  },
-  accident: { label: 'Acidente',      icon: '💥', color: '#f97316', expires: 180 },
-  radar:    { label: 'Radar',         icon: '📷', color: '#8b5cf6', expires: 9999 },
-  traffic:  { label: 'Trânsito',      icon: '🚦', color: '#10b981', expires: 45  },
-  road:     { label: 'Obra/Desvio',   icon: '🚧', color: '#06b6d4', expires: 9999 }
+const TYPES = {
+  blitz:    {label:'Blitz Policial',   emoji:'\uD83D\uDE94', bg:'#1e0e0e', border:'#ff4757', color:'#ff4757'},
+  police:   {label:'Pol\u00EDcia/Viatura', emoji:'\uD83D\uDC6E', bg:'#0a0f1e', border:'#3b9eff', color:'#3b9eff'},
+  accident: {label:'Acidente',          emoji:'\uD83D\uDCA5', bg:'#1e1208', border:'#ff7c3c', color:'#ff7c3c'},
+  radar:    {label:'Radar/Lombada',     emoji:'\uD83D\uDCF7', bg:'#120a1e', border:'#a855f7', color:'#a855f7'},
+  traffic:  {label:'Tr\u00E2nsito Lento', emoji:'\uD83D\uDEA6', bg:'#081510', border:'#22c55e', color:'#22c55e'},
+  road:     {label:'Obra/Desvio',       emoji:'\uD83D\uDEA7', bg:'#081415', border:'#22d3ee', color:'#22d3ee'},
 };
 
-// ---- MODAL ----
-function openModal() {
-  document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('locationDisplay').value = '';
-  document.getElementById('alertDesc').value = '';
-  selectedLatLng = null;
-  clickMode = true;
-  document.getElementById('mapHint').style.display = 'block';
-}
+const map = L.map('map',{center:[-26.745,-49.175],zoom:12,zoomControl:false,preferCanvas:true});
 
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-  clickMode = false;
-  document.getElementById('mapHint').style.display = 'none';
-}
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_retina/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; OpenStreetMap &copy; CARTO',
+  maxZoom:19,tileSize:256,detectRetina:true,keepBuffer:4,
+}).addTo(map);
 
-// ---- MAP CLICK ----
-map.on('click', function(e) {
-  if (!clickMode) return;
-  selectedLatLng = e.latlng;
-  document.getElementById('locationDisplay').value =
-    `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
-});
+L.control.zoom({position:'bottomright'}).addTo(map);
 
-// ---- SUBMIT ----
-function submitAlert() {
-  if (!selectedLatLng) {
-    alert('Por favor, clique no mapa para selecionar a localização!');
-    return;
-  }
-  const type = document.getElementById('alertType').value;
-  const desc = document.getElementById('alertDesc').value || typeConfig[type].label;
-  const id = ++idCounter;
-  const alert = {
-    id, type, desc,
-    lat: selectedLatLng.lat,
-    lng: selectedLatLng.lng,
-    time: new Date(),
-    confirms: 0,
-    expires: typeConfig[type].expires
-  };
+let alerts=[],markers={},idCounter=0,activeType='all',clickMode=false,pendingLL=null,selTypeVal='blitz';
 
-  alerts.push(alert);
-  addMarker(alert);
-  renderList();
-  updateStats();
-  closeModal();
-}
-
-// ---- MARKER ----
-function createIcon(type) {
-  const cfg = typeConfig[type];
+function makeIcon(type){
+  const t=TYPES[type];
   return L.divIcon({
-    html: `<div style="
-      background: ${cfg.color};
-      width: 36px; height: 36px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      display:flex; align-items:center; justify-content:center;
-      box-shadow: 0 2px 12px ${cfg.color}88;
-      border: 2px solid rgba(255,255,255,0.3);
-    "><span style="transform:rotate(45deg); font-size:16px">${cfg.icon}</span></div>`,
-    className: '',
-    iconSize: [36, 36],
-    iconAnchor: [18, 36]
+    html:'<div class="emarker" style="background:'+t.bg+';border-color:'+t.border+';box-shadow:0 4px 20px '+t.border+'66">'+t.emoji+'</div>',
+    className:'',iconSize:[44,44],iconAnchor:[22,44],popupAnchor:[0,-46]
   });
 }
 
-function addMarker(alert) {
-  const m = L.marker([alert.lat, alert.lng], { icon: createIcon(alert.type) })
-    .addTo(map)
-    .bindPopup(`
-      <div style="font-family:'DM Sans',sans-serif; min-width:160px">
-        <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px">
-          ${typeConfig[alert.type].icon} ${typeConfig[alert.type].label}
-        </div>
-        <div style="color:#888; font-size:0.8rem; margin-bottom:6px">${alert.desc}</div>
-        <div style="color:#aaa; font-size:0.72rem">🕐 ${formatTime(alert.time)}</div>
-        <div style="color:#10b981; font-size:0.72rem; margin-top:2px">✅ ${alert.confirms} confirmações</div>
-      </div>
-    `);
-  markers[alert.id] = m;
+function popupHTML(a){
+  const t=TYPES[a.type];
+  return '<div style="min-width:190px;padding:2px">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+    '<span style="font-size:1.5rem">'+t.emoji+'</span>'+
+    '<div><div style="font-weight:700;font-size:0.93rem;color:'+t.color+'">'+t.label+'</div>'+
+    '<div style="font-size:0.68rem;color:#546e8a">'+fmtTime(a.time)+'</div></div></div>'+
+    '<div style="font-size:0.78rem;color:#8ca0b8;line-height:1.45;margin-bottom:8px">'+a.desc+'</div>'+
+    '<div style="display:flex;justify-content:space-between">'+
+    '<span style="font-size:0.68rem;color:#22c55e">\u2705 '+a.confirms+' confirma\u00E7\u00E3o'+(a.confirms!==1?'s':'')+'</span>'+
+    '<span style="font-size:0.68rem;color:#546e8a">\u23F1 '+a.expires+'min</span></div></div>';
 }
 
-// ---- RENDER LIST ----
-function renderList() {
-  const list = document.getElementById('alertsList');
-  const filtered = activeFilter === 'all'
-    ? alerts
-    : alerts.filter(a => a.type === activeFilter);
+function addMarker(a){
+  const m=L.marker([a.lat,a.lng],{icon:makeIcon(a.type),title:TYPES[a.type].label})
+    .addTo(map).bindPopup(popupHTML(a),{maxWidth:250});
+  markers[a.id]=m;
+}
 
-  if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📍</div>
-      Nenhum alerta${activeFilter !== 'all' ? ' deste tipo' : ''}.<br>
-      Seja o primeiro a reportar!
-    </div>`;
+function renderFeed(){
+  const feed=document.getElementById('feed');
+  const list=activeType==='all'?alerts:alerts.filter(a=>a.type===activeType);
+  if(!list.length){
+    feed.innerHTML='<div class="empty"><div class="empty-e">\uD83D\uDCCD</div><div class="empty-t">Nenhum alerta'+(activeType!=='all'?' deste tipo':'')+'.</div></div>';
     return;
   }
-
-  list.innerHTML = filtered.slice().reverse().map(a => {
-    const cfg = typeConfig[a.type];
-    return `
-    <div class="alert-item" style="border-left-color:${cfg.color}" onclick="focusAlert(${a.id})">
-      <div class="alert-header">
-        <div class="alert-type" style="color:${cfg.color}">${cfg.icon} ${cfg.label}</div>
-        <div class="alert-time">${formatTime(a.time)}</div>
-      </div>
-      <div class="alert-desc">${a.desc}</div>
-      <div class="alert-addr">📍 ${a.lat.toFixed(4)}, ${a.lng.toFixed(4)}</div>
-      <div class="confirm-row">
-        <button class="confirm-btn" onclick="event.stopPropagation(); confirmAlert(${a.id})">✅ Confirmar</button>
-        <span class="confirm-count">${a.confirms} ${a.confirms === 1 ? 'confirmação' : 'confirmações'}</span>
-      </div>
-    </div>`;
+  feed.innerHTML=list.slice().reverse().map(a=>{
+    const t=TYPES[a.type];
+    return '<div class="card" style="--c:'+t.color+'" onclick="focusAlert('+a.id+')">'+
+      '<div class="card-top"><div class="card-type" style="color:'+t.color+'"><span class="card-emoji">'+t.emoji+'</span>'+t.label+'</div>'+
+      '<div class="card-time">'+fmtTime(a.time)+'</div></div>'+
+      '<div class="card-desc">'+a.desc+'</div>'+
+      '<div class="card-bottom"><div class="card-loc">\uD83D\uDCCD '+a.lat.toFixed(4)+', '+a.lng.toFixed(4)+'</div>'+
+      '<button class="conf-btn" onclick="event.stopPropagation();confirmAlert('+a.id+')">\u2705 '+a.confirms+'</button></div></div>';
   }).join('');
 }
 
-function focusAlert(id) {
-  const a = alerts.find(x => x.id === id);
-  if (a) {
-    map.setView([a.lat, a.lng], 16, { animate: true });
-    markers[id]?.openPopup();
-  }
-}
-
-function confirmAlert(id) {
-  const a = alerts.find(x => x.id === id);
-  if (a) {
-    a.confirms++;
-    renderList();
-    markers[id]?.setPopupContent(`
-      <div style="font-family:'DM Sans',sans-serif; min-width:160px">
-        <div style="font-weight:700; font-size:0.95rem; margin-bottom:4px">
-          ${typeConfig[a.type].icon} ${typeConfig[a.type].label}
-        </div>
-        <div style="color:#888; font-size:0.8rem; margin-bottom:6px">${a.desc}</div>
-        <div style="color:#aaa; font-size:0.72rem">🕐 ${formatTime(a.time)}</div>
-        <div style="color:#10b981; font-size:0.72rem; margin-top:2px">✅ ${a.confirms} confirmações</div>
-      </div>
-    `);
-  }
-}
-
-// ---- FILTER ----
-function filterType(type, btn) {
-  activeFilter = type;
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  Object.keys(markers).forEach(id => {
-    const a = alerts.find(x => x.id == id);
-    if (!a) return;
-    if (type === 'all' || a.type === type) {
-      if (!map.hasLayer(markers[id])) markers[id].addTo(map);
-    } else {
-      if (map.hasLayer(markers[id])) map.removeLayer(markers[id]);
-    }
+function updateStats(){
+  const c={};Object.keys(TYPES).forEach(k=>c[k]=0);
+  alerts.forEach(a=>{c[a.type]=(c[a.type]||0)+1});
+  Object.keys(TYPES).forEach(k=>{
+    const s=document.getElementById('s-'+k);if(s)s.textContent=c[k];
+    const f=document.getElementById('f-'+k);if(f)f.textContent=c[k];
   });
-  renderList();
+  const tot=alerts.length;
+  const sa=document.getElementById('s-all');if(sa)sa.textContent=tot;
+  const fa=document.getElementById('f-all');if(fa)fa.textContent=tot;
 }
 
-// ---- STATS ----
-function updateStats() {
-  const counts = { blitz: 0, police: 0, accident: 0, radar: 0, traffic: 0 };
-  alerts.forEach(a => { if (counts[a.type] !== undefined) counts[a.type]++; });
-  document.getElementById('countBlitz').textContent = counts.blitz;
-  document.getElementById('countPolice').textContent = counts.police;
-  document.getElementById('countAccident').textContent = counts.accident;
-  document.getElementById('countRadar').textContent = counts.radar;
-  document.getElementById('countTraffic').textContent = counts.traffic;
+function filterBy(type,statEl,filtEl){
+  activeType=type;
+  document.querySelectorAll('.filt').forEach(el=>el.classList.toggle('active',el.dataset.type===type));
+  document.querySelectorAll('.stat').forEach(el=>el.classList.toggle('on',el.dataset.type===type));
+  Object.keys(markers).forEach(id=>{
+    const a=alerts.find(x=>x.id==id);if(!a)return;
+    const show=type==='all'||a.type===type;
+    if(show&&!map.hasLayer(markers[id]))markers[id].addTo(map);
+    if(!show&&map.hasLayer(markers[id]))map.removeLayer(markers[id]);
+  });
+  renderFeed();
 }
 
-// ---- UTILS ----
-function formatTime(date) {
-  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+function focusAlert(id){
+  const a=alerts.find(x=>x.id===id);
+  if(a){map.flyTo([a.lat,a.lng],16,{animate:true,duration:0.8});setTimeout(()=>markers[id]?.openPopup(),850)}
 }
 
-// ---- DEMO DATA ----
-function addDemoAlerts() {
-  const demos = [
-    { type: 'blitz',    lat: -23.5505, lng: -46.6333, desc: 'Blitz na Av. Paulista, altura do MASP', confirms: 4 },
-    { type: 'radar',    lat: -23.5545, lng: -46.6200, desc: 'Radar fixo Av. Consolação - 40km/h',   confirms: 11 },
-    { type: 'accident', lat: -23.5600, lng: -46.6450, desc: 'Colisão entre 2 veículos, faixa direita bloqueada', confirms: 2 },
-    { type: 'traffic',  lat: -23.5480, lng: -46.6400, desc: 'Trânsito lento sentido centro',          confirms: 7 },
-    { type: 'police',   lat: -23.5430, lng: -46.6280, desc: 'Viatura estacionada na esquina',         confirms: 1 },
-    { type: 'road',     lat: -23.5650, lng: -46.6300, desc: 'Obra na pista - desvio pela lateral',    confirms: 3 },
+function confirmAlert(id){
+  const a=alerts.find(x=>x.id===id);if(!a)return;
+  a.confirms++;markers[id]?.setPopupContent(popupHTML(a));renderFeed();
+  toast('\u2705 Ocorr\u00EAncia confirmada!');
+}
+
+function clearAll(){
+  if(!alerts.length)return;
+  if(!confirm('Remover todos os alertas?'))return;
+  alerts.forEach(a=>map.removeLayer(markers[a.id]));
+  alerts=[];markers={};renderFeed();updateStats();
+}
+
+function openModal(){
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('locDisp').value='';document.getElementById('desc').value='';
+  pendingLL=null;clickMode=true;document.getElementById('hint').style.display='block';
+  document.querySelectorAll('.ttype').forEach(el=>el.classList.toggle('sel',el.dataset.type==='blitz'));
+  selTypeVal='blitz';
+}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  clickMode=false;document.getElementById('hint').style.display='none';
+}
+function selType(el){
+  document.querySelectorAll('.ttype').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');selTypeVal=el.dataset.type;
+}
+
+map.on('click',e=>{
+  if(!clickMode)return;
+  pendingLL=e.latlng;
+  document.getElementById('locDisp').value=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+  document.getElementById('hint').style.display='none';
+});
+
+function submitAlert(){
+  if(!pendingLL){toast('\u26A0\uFE0F Clique no mapa para marcar o local!',true);return}
+  const desc=document.getElementById('desc').value.trim()||TYPES[selTypeVal].label;
+  const id=++idCounter;
+  const expMap={blitz:120,police:60,accident:180,radar:9999,traffic:45,road:9999};
+  const a={id,type:selTypeVal,desc,lat:pendingLL.lat,lng:pendingLL.lng,time:new Date(),confirms:0,expires:expMap[selTypeVal]};
+  alerts.push(a);addMarker(a);
+  if(activeType!=='all'&&activeType!==selTypeVal)map.removeLayer(markers[id]);
+  renderFeed();updateStats();
+  map.flyTo([a.lat,a.lng],15,{animate:true,duration:0.7});
+  setTimeout(()=>markers[id]?.openPopup(),800);
+  closeModal();toast(TYPES[selTypeVal].emoji+' Alerta publicado!');
+}
+
+function toast(msg,warn=false){
+  const t=document.createElement('div');t.className='toast';
+  t.style.color=warn?'#f6a623':'#22c55e';
+  t.style.borderColor=warn?'rgba(246,166,35,0.35)':'rgba(34,197,94,0.35)';
+  t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800);
+}
+
+function fmtTime(d){return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+
+// Demo data — região Pomerode/Jaraguá/Blumenau
+(function(){
+  const demos=[
+    {type:'blitz',    lat:-26.7340,lng:-49.1780,desc:'Blitz na SC-416 entrada de Pomerode, sentido Blumenau — 2 viaturas'},
+    {type:'radar',    lat:-26.7575,lng:-49.0715,desc:'Radar fixo SC-470 Badenfurt — limite 60km/h'},
+    {type:'accident', lat:-26.7120,lng:-49.2050,desc:'Colis\u00E3o traseira SC-416 pr\u00F3ximo a Api\u00FAna — faixa da direita bloqueada'},
+    {type:'police',   lat:-26.6590,lng:-49.2920,desc:'Viatura PM estacionada na BR-280 Serra Jarag. do Sul'},
+    {type:'traffic',  lat:-26.7430,lng:-49.1310,desc:'Tr\u00E2nsito lento na entrada do centro de Pomerode'},
+    {type:'road',     lat:-26.7705,lng:-49.0510,desc:'Obra no viaduto Badenfurt — desvio pela rua lateral'},
+    {type:'blitz',    lat:-26.6890,lng:-49.2410,desc:'Blitz PM km\u00A038 SC-416 altura de Timb\u00F3 — abordagem veicular'},
+    {type:'radar',    lat:-26.7195,lng:-49.1600,desc:'Lombada eletr\u00F4nica nova Pomerode centro, 40km/h'},
+    {type:'accident', lat:-26.7800,lng:-49.0300,desc:'Capotamento na SC-470 pr\u00F3ximo a Blumenau — duas faixas interditadas'},
+    {type:'traffic',  lat:-26.7650,lng:-49.0650,desc:'Congestionamento na entrada de Blumenau sentido Norte'},
   ];
-  demos.forEach(d => {
-    const id = ++idCounter;
-    const a = { id, ...d, time: new Date(Date.now() - Math.random() * 3600000), expires: 120 };
-    alerts.push(a);
-    addMarker(a);
+  demos.forEach(d=>{
+    const id=++idCounter;
+    const a={id,...d,time:new Date(Date.now()-Math.floor(Math.random()*90+5)*60000),confirms:Math.floor(Math.random()*10),expires:120};
+    alerts.push(a);addMarker(a);
   });
-  renderList();
-  updateStats();
-}
-
-addDemoAlerts();
-</script>
+  renderFeed();updateStats();
+})();
+<\/script>
 </body>
 </html>
